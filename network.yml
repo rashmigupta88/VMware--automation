@@ -1,0 +1,86 @@
+---
+- name: Add Portgroup with all settings defined
+  hosts: 192.168.19.153
+  connection: local
+  tasks:
+  - name: read CSV for vswitch
+    read_csv:
+      path: portgroup_1.csv
+      key: Unique_key
+    register: vs
+
+  - name : Create vswitch
+    vmware_vswitch:
+     hostname: '{{ item.value.esxi_hostname }}'
+     username: '{{ item.value.user }}'
+     password: '{{ item.value.password }}'
+     validate_certs: false
+     switch: '{{ item.value.vSwitch }}'
+  #   nics: vmnic0
+     mtu: 1500
+    loop: '{{ vs.dict|dict2items }}'
+
+  - name: read CSV for portgroup
+    read_csv:
+      path: portgroup_1.csv
+      key: portgroup_name
+    register: pg
+
+  - name : Create Portgoup
+    vmware_portgroup:
+     hostname: '{{ item.value.esxi_hostname }}'
+     username: '{{ item.value.user }}'
+     password: '{{ item.value.password }}'
+     validate_certs: False
+     esxi_hostname: VMware.localdomain
+     switch_name: '{{ item.value.vSwitch }}'
+     portgroup_name: '{{ item.value.portgroup_name }}'
+     vlan_id: '{{ item.value.vlan_id }}'
+     network_policy:
+         promiscuous_mode: '{{ item.value.PromiscuousMode }}'
+         mac_changes: '{{ item.value.mac_changes }}'
+         forged_transmits: '{{ item.value.forged_transmits}}'
+    # traffic_shaping:
+     #    enabled: True
+         #average_bandwidth: 100000
+         #peak_bandwidth: 100000
+         #burst_size: 102400
+    # teaming:
+         #load_balancing: failover_explicit
+         #network_failure_detection: link_status_only
+         #notify_switches: true
+         #failback: true
+         #active_adapters:
+          #   - vmnic0
+         #standby_adapters:
+         #    - vmnic1
+   #delegate_to: localhost
+   #register: teaming_result
+   #
+    loop: "{{ pg.dict|dict2items }}"
+
+
+  - name: read CSV for portgroup
+    read_csv:
+      path: portgroup_1.csv
+      key: VMKernelAdapter
+    register: vk
+
+  - name : Create Vmkernec l NIC
+    vmware_vmkernel:
+     hostname: '{{ item.value.esxi_hostname }}'
+     username: '{{ item.value.user }}'
+     password: '{{ item.value.password }}'
+     validate_certs: False
+     esxi_hostname: VMware.localdomain
+     switch_name: '{{ item.value.vSwitch }}'
+     portgroup_name: '{{ item.value.portgroup_name }}'
+     state: present
+     device: '{{ item.value.VMKernelAdapter }}'
+     network:
+        type: 'static'
+        ip_address: '{{ item.value.IPReference }}'
+        subnet_mask: '{{ item.value.SubnetReference }}'
+        tcpip_stack: '{{ item.value.TCPStack }}'
+     enable_vmotion: True
+    loop: "{{ vk.dict|dict2items }}"

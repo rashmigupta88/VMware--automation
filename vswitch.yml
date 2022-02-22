@@ -1,0 +1,22 @@
+---
+- name: add vmware vswitch
+  hosts: 192.168.19.153
+  connection: local
+  tasks:
+  - read_csv:
+     path: vSwitch_1.csv
+     key: vSwitch
+    register: vswitch
+
+  
+  - vmware_vswitch:
+     hostname: '{{ item.value.esxi_hostname }}'
+     username: {{ item.value.user }}'
+     password: {{ item.value.password }}'
+     validate_certs: false
+     switch: '{{ item.value.vSwitch }}'
+  #   nics: vmnic0
+     mtu: 1500
+
+  
+    loop: '{{ vSwitch.dict|dict2items }}'
